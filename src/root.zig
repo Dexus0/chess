@@ -122,9 +122,12 @@ pub const Team = enum {
     }
 };
 
+pub const Empty = enum(@typeInfo(Piece).@"struct".backing_integer.?) {
+    empty = 0,
+};
 pub const Tile = packed union {
     Piece: Piece,
-    Empty: u0,
+    Empty: Empty,
 
     fn is_empty(self: Tile) bool {
         return @as(u8, @bitCast(self)) == 0;
