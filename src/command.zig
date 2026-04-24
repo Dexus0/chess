@@ -1,5 +1,6 @@
 const chess = @import("chess");
 const Coordinates = chess.Coordinates;
+const Piece = chess.Piece;
 
 const Game_Type = chess.Game_Type;
 const promote = chess.promote;
@@ -25,16 +26,29 @@ pub fn Game(game_type: Game_Type) type {
     const PromoteTarget = @FieldType(C, "promote");
 
     return struct {
-        pub fn send_command(command: C) !void {
-            switch (command) {
-                .move => |move| execute_move(move),
-                .promote => |target| execute_promote(target),
-            }
+        const Self = @This();
+        pub fn parse_command(self: Self, command: C) !void {
+            try switch (command) {
+                .move => |move| send_move(move),
+                .promote => |target| send_promote(self, target),
+            };
+            self.last_valid_command = command;
         }
-        fn execute_move(move: Move) !void {}
-        fn execute_promote(target: PromoteTarget) !void {}
+        fn send_move(move: Move) !void {
+            _ = move; // autofix
 
-        last_command: C = Move{ .from = 0, .to = 0 },
+        }
+        fn send_promote(self: Self, target: PromoteTarget) !void {
+            if (self.last_valid_command != Move) return error.NoMoveBeforePromote;
+
+            const promotee = for (self.board[7 * ~(self.turn % 2)]) |*tile| switch (tile) {
+                Piece => |*piece| if (piece.class == .pawn) break piece,
+            } else return error.NoPawnInEnemyBackline;
+
+            promotee.class = .from(target);
+        }
+
+        last_valid_command: C = Move{ .from = 0, .to = 0 },
         board: chess.Board align(@sizeOf(chess.Board)) = chess.start_board,
         turn: usize = 0,
     };
