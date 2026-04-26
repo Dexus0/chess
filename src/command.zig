@@ -1,4 +1,4 @@
-const chess = @import("chess");
+const chess = @import("chess.zig");
 const Coordinates = chess.Coordinates;
 const Piece = chess.Piece;
 
