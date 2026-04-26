@@ -12,12 +12,12 @@ pub const Piece = packed struct {
 pub const TileEnum = undefined;
 
 fn create_pawnrow(team: Team) Row {
-    return @splat(Tile{ .Piece = .{ .team = .from_Team(team), .class = .pawn } });
+    return @splat(Tile{ .piece = .{ .team = .from_Team(team), .class = .pawn } });
 }
 fn create_backrow(team: Team) Row {
     var rook_knight_bishop: [3]Tile = undefined;
     for (&rook_knight_bishop, [_]Class{ .rook, .knight, .bishop }) |*piece, class| {
-        piece.* = .{ .Piece = .{ .team = .from_Team(team), .class = class } };
+        piece.* = .{ .piece = .{ .team = .from_Team(team), .class = class } };
     }
 
     // colum of piece
@@ -29,13 +29,13 @@ fn create_backrow(team: Team) Row {
         std.mem.reverse(Tile, &rook_knight_bishop);
     }
     for (row[rook_knight_bishop.len..][0..2], [_]Class{ .queen, .king }) |*piece, class| {
-        piece.* = .{ .Piece = .{ .class = class, .team = .from_Team(team) } };
+        piece.* = .{ .piece = .{ .class = class, .team = .from_Team(team) } };
     }
 
     return row;
 }
 fn create_board() Board {
-    const empty_row = [_]Tile{.{ .Empty = 0 }} ** 8;
+    const empty_row = [_]Tile{.{ .empty = .empty }} ** 8;
 
     var board: Board = @splat(empty_row);
     board[0] = create_backrow(.White);
@@ -56,16 +56,17 @@ pub const Class = enum(u3) {
     king,
 
     pub fn from(other: anytype) Class {
+        // `test from` ensures this is safe now
         // comptime std.debug.assert(is_enum_to_enum_safe(@TypeOf(other), Class));
 
-        return @enumFromInt(@intFromEnum(other) + 1);
+        return @enumFromInt(@intFromEnum(other) + @as(u3, 1));
     }
     test from {
         const promotion_enums = @typeInfo(promote).@"struct".decls;
 
-        for (promotion_enums) |decl| {
+        inline for (promotion_enums) |decl| {
             std.log.info("testing '{s}'", .{decl.name});
-            const Enum: type = @field(type, decl.name);
+            const Enum: type = @field(promote, decl.name);
 
             const classes, const promotions = .{ std.enums.values(Class), std.enums.values(Enum) };
             const min = @min(classes.len, promotions.len);
@@ -126,11 +127,14 @@ pub const Empty = enum(@typeInfo(Piece).@"struct".backing_integer.?) {
     empty = 0,
 };
 pub const Tile = packed union {
-    Piece: Piece,
-    Empty: Empty,
+    piece: Piece,
+    empty: Empty,
 
-    fn is_empty(self: Tile) bool {
-        return @as(u8, @bitCast(self)) == 0;
+    pub fn is_empty(self: Tile) bool {
+        return switch (self) {
+            else => false,
+            .{ .empty = .empty } => true,
+        };
     }
 };
 pub const Row = [8]Tile;
@@ -147,6 +151,9 @@ pub const Game_Type = enum(u1) {
     Reduced,
 };
 
-test "Tile size is u8" {
+test Tile {
     try std.testing.expectEqual(1, @sizeOf(Tile));
+
+    const empty_tile = Tile{ .empty = .empty };
+    try std.testing.expect(empty_tile.is_empty());
 }

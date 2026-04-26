@@ -38,14 +38,18 @@ pub fn Game(game_type: Game_Type) type {
             _ = move; // autofix
 
         }
-        fn send_promote(self: Self, target: PromoteTarget) !void {
-            if (self.last_valid_command != Move) return error.NoMoveBeforePromote;
+        fn send_promote(self: *Self, target: PromoteTarget) !void {
+            const last_move = switch (self.last_valid_command) {
+                .move => |move| move.to,
+                else => return error.NoMoveBeforePromote,
+            };
+            const enemy_backrow_coord = ~(self.turn % 2) * 7;
+            const moved_piece = &self.board[last_move.row][last_move.column].piece;
 
-            const promotee = for (self.board[7 * ~(self.turn % 2)]) |*tile| switch (tile) {
-                Piece => |*piece| if (piece.class == .pawn) break piece,
-            } else return error.NoPawnInEnemyBackline;
-
-            promotee.class = .from(target);
+            if (last_move.row == enemy_backrow_coord and moved_piece.class == .pawn)
+                moved_piece.class = .from(target)
+            else
+                return error.NoPawnInEnemyBackrow;
         }
 
         last_valid_command: C = Move{ .from = 0, .to = 0 },
