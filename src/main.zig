@@ -2,8 +2,8 @@ const std = @import("std");
 
 const chess = @import("chess");
 
-const stdout = std.fs.File.stdout();
-const stdin = std.fs.File.stdin();
+const stdout = std.Io.File.stdout();
+const stdin = std.Io.File.stdin();
 
 var output_buf: [64]u8 = undefined;
 var input_buf: [64]u8 = undefined;
